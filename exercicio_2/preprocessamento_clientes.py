@@ -24,42 +24,41 @@ print(f"\nDuplicados exatos (linha completa): {duplicados_completos}")
 print(f"Registros repetidos por id_cliente: {duplicados_cliente}")
 
 # 2. Limpeza
-# Remove duplicidades completas e garante unacidade por id_cliente (mantendo o último ou primeiro registro válido)
+# Remove duplicidades completas e garante unacidade por id_cliente
 limpo = df.drop_duplicates().copy()
 if 'id_cliente' in limpo.columns:
     limpo = limpo.drop_duplicates(subset=['id_cliente'], keep='last').copy()
 
-# Padronizar campos textuais (ex: cidade, estado, etc.)
+# Padronizar campos textuais (ex: cidade)
 if 'cidade' in limpo.columns:
     limpo['cidade'] = limpo['cidade'].str.strip().str.title()
 
-# Tratamento de valores ausentes (exemplo: preencher nulos numéricos com mediana e categóricos com a moda ou 'Desconhecido')
+# Tratamento correto de valores ausentes em colunas numéricas (usando a mediana de cada coluna)
 colunas_numericas_analise = ['idade', 'renda_mensal', 'ticket_medio']
 for col in colunas_numericas_analise:
     if col in limpo.columns:
         limpo[col] = pd.to_numeric(limpo[col], errors='coerce')
-        limpo[col] = limpo.fillna(limpo[col].median())
+        limpo[col] = limpo[col].fillna(limpo[col].median())
 
-# Análise e tratamento de outliers (Mantendo os dados mas registrando a decisão, conforme observação da atividade)
+# Tratamento de ausentes para categoria_cliente
+if 'categoria_cliente' in limpo.columns:
+    limpo['categoria_cliente'] = limpo['categoria_cliente'].fillna('DESCONHECIDO')
 
 # 3. Transformação (Padronização e Codificação)
-# Mantemos cópias dos atributos originais se necessário, mas aplicaremos o StandardScaler para normalizar a escala para o PCA
 scaler = StandardScaler()
 dados_escala = limpo[colunas_numericas_analise].fillna(0)
 matriz_padronizada = scaler.fit_transform(dados_escala)
 
-# Codificação de variável categórica (ex: categoria_cliente) usando One-Hot Encoding ou mapeamento ordinal
+# Codificação de variável categórica (categoria_cliente) utilizando One-Hot Encoding
 if 'categoria_cliente' in limpo.columns:
-    # Garantindo que esteja limpo e mapeado ou via get_dummies
     limpo['categoria_cliente'] = limpo['categoria_cliente'].str.strip().str.upper()
     limpo = pd.get_dummies(limpo, columns=['categoria_cliente'], prefix='cat', drop_first=False)
 
 # 4. PCA (Análise de Componentes Principais)
-# Seleciona os atributos numéricos preparados
 pca = PCA(n_components=2)
 componentes_pca = pca.fit_transform(matriz_padronizada)
 
-# Adiciona os componentes principais ao DataFrame limpo
+# Adiciona os dois componentes principais ao DataFrame
 limpo['componente_1'] = componentes_pca[:, 0]
 limpo['componente_2'] = componentes_pca[:, 1]
 
